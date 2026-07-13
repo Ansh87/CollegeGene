@@ -7,8 +7,12 @@
     "install:all": "cd server && npm install && cd ../client && npm install",
     "import": "cd server && npm run import:verified",
     "build:client": "cd client && npm run build",
+    "build": "npm run install:all && npm run build:client",
     "start": "cd server && npm start",
     "dev:server": "cd server && npm run dev",
     "dev:client": "cd client && npm run dev"
+  },
+  "engines": {
+    "node": ">=22 <25"
   }
 }

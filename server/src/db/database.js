@@ -1,7 +1,15 @@
 // database.js — SQLite via Node's built-in node:sqlite (Node 22+). No native
 // compilation needed. Implements all spec tables + an api_cache table.
 import { DatabaseSync } from "node:sqlite";
+import fs from "node:fs";
+import path from "node:path";
 import { config } from "../config.js";
+
+// Ensure the database's parent directory exists. This matters when DB_PATH points
+// at a mounted persistent volume (e.g. /data/collegegene.db on Railway) whose
+// directory must exist before the file can be opened.
+const dbDir = path.dirname(path.resolve(config.dbPath));
+fs.mkdirSync(dbDir, { recursive: true });
 
 export const db = new DatabaseSync(config.dbPath);
 db.exec("PRAGMA journal_mode = WAL;");
