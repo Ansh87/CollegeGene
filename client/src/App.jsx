@@ -218,8 +218,8 @@ function prettyField(k) { return FIELD_LABELS[k] || k; }
             ))}
           </nav>
           {user && (
-            <div className="row" style={{ gap: 8, alignItems: "center", marginLeft: "auto" }}>
-              <span className="note" style={{ fontSize: 11, color: "var(--muted)" }}>
+            <div className="user-menu" style={{ marginLeft: "auto" }}>
+              <span className="user-email">
                 Signed in as {user.email || user.displayName || "user"}
               </span>
               <button className="btn sm ghost" onClick={() => signOut().catch(() => {})}>Sign out</button>

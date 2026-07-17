@@ -18,7 +18,19 @@ async function afetch(url, options = {}) {
 
 const j = async (r) => {
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw Object.assign(new Error(data.message || `Request failed (${r.status})`), { payload: data, status: r.status });
+  if (!r.ok) {
+    // Prefer the server's own message. Fall back to a plain-language explanation
+    // for the two statuses that otherwise surface as a bare, confusing code.
+    let msg = data.message;
+    if (!msg && r.status === 503) {
+      msg = "The server's authentication isn't configured yet (FIREBASE_SERVICE_ACCOUNT_JSON is missing). Sign-in-protected features like document upload won't work until it's set.";
+    } else if (!msg && r.status === 401) {
+      msg = "You're not signed in (or your session expired). Sign in again and retry.";
+    } else if (!msg) {
+      msg = `Request failed (${r.status})`;
+    }
+    throw Object.assign(new Error(msg), { payload: data, status: r.status });
+  }
   return data;
 };
 
