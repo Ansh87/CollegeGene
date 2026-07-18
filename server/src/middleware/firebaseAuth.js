@@ -18,7 +18,15 @@ function ensureInit() {
     let credentialObj = null;
 
     if (config.firebase.serviceAccountJson) {
-      credentialObj = JSON.parse(config.firebase.serviceAccountJson);
+      const raw = config.firebase.serviceAccountJson.trim();
+      // Some dashboards (and copy/paste) wrap the whole blob in extra quotes.
+      const unwrapped = (raw.startsWith('"') && raw.endsWith('"')) ? raw.slice(1, -1) : raw;
+      credentialObj = JSON.parse(unwrapped);
+      // The private_key inside the JSON often arrives with LITERAL "\n" sequences
+      // (env vars can't hold real newlines). Restore them or cert() will reject it.
+      if (credentialObj.private_key) {
+        credentialObj.private_key = credentialObj.private_key.replace(/\\n/g, "\n");
+      }
     } else if (config.firebase.projectId && config.firebase.clientEmail && config.firebase.privateKey) {
       credentialObj = {
         projectId: config.firebase.projectId,
@@ -30,16 +38,29 @@ function ensureInit() {
 
     if (!credentialObj) {
       initError = new Error("Firebase Admin credentials not configured.");
+      console.error("[auth] Firebase Admin NOT initialized: no credentials found. Set FIREBASE_SERVICE_ACCOUNT_JSON.");
       return;
     }
     if (!admin.apps.length) {
       admin.initializeApp({ credential: admin.credential.cert(credentialObj) });
     }
     initialized = true;
+    console.log("[auth] Firebase Admin initialized OK.");
   } catch (e) {
-    // Never log the private key or token; log only a short reason.
-    initError = new Error(`Firebase Admin init failed: ${e.message.slice(0, 120)}`);
+    // Log the REASON only — never the key material or token.
+    initError = new Error(`Firebase Admin init failed: ${e.message.slice(0, 160)}`);
+    console.error("[auth] Firebase Admin init FAILED:", e.message.slice(0, 160));
   }
+}
+
+// Report real initialization status (used by /api/health). Actually attempts
+// init rather than merely checking that env strings exist, so health can't
+// disagree with what protected routes experience.
+export function authStatus() {
+  if (config.authDevBypass) return "DEV BYPASS (no Firebase — local only)";
+  ensureInit();
+  if (initialized) return "Firebase Admin configured";
+  return `NOT configured — ${initError ? initError.message : "unknown reason"}`;
 }
 
 // A fixed dev user used only when AUTH_DEV_BYPASS=true and NODE_ENV!=="production".
@@ -57,7 +78,7 @@ export async function requireAuth(req, res, next) {
   if (!initialized) {
     return res.status(503).json({
       error: "auth_unconfigured",
-      message: "Authentication is not configured on the server. Set FIREBASE_SERVICE_ACCOUNT_JSON (or the FIREBASE_* fields).",
+      message: `Authentication is not working on the server. ${initError ? initError.message : "Set FIREBASE_SERVICE_ACCOUNT_JSON."}`,
     });
   }
 

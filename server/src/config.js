@@ -58,13 +58,14 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || "development",
 };
 
-export function keyStatus() {
+export function keyStatus(authStatusText) {
   return {
     scorecard: config.scorecard.usingDemoKey ? "DEMO_KEY (shared, rate-limited)" : "configured",
     bls: config.bls.apiKey ? "configured" : "not set (using bundled BLS snapshot)",
     gemini: config.gemini.apiKey ? `configured (${config.gemini.model})` : "not set (document parsing manual)",
-    auth: (config.firebase.serviceAccountJson || (config.firebase.projectId && config.firebase.clientEmail && config.firebase.privateKey))
-      ? "Firebase Admin configured"
-      : (config.authDevBypass ? "DEV BYPASS (no Firebase — local only)" : "NOT configured (protected routes will 401)"),
+    // Real status is passed in by the caller (index.js) from the auth middleware,
+    // so health can never claim "configured" while protected routes are 503-ing.
+    // Importing it here would create a config <-> middleware circular import.
+    auth: authStatusText || "unknown",
   };
 }

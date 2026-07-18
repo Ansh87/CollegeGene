@@ -10,7 +10,7 @@ import { collegesRouter } from "./routes/colleges.js";
 import { careersRouter, studentRouter, advisorRouter } from "./routes/misc.js";
 import { debugRouter } from "./routes/debug.js";
 import { documentsRouter } from "./routes/documents.js";
-import { requireAuth } from "./middleware/firebaseAuth.js";
+import { requireAuth, authStatus } from "./middleware/firebaseAuth.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -28,7 +28,7 @@ app.get("/api/health", (_req, res) => {
       careers: "U.S. Bureau of Labor Statistics (OOH)",
       verified: "Manually verified from official college admissions sites / Common Data Set",
     },
-    keys: keyStatus(),
+    keys: keyStatus(authStatus()),
     cacheTtlHours: config.cacheTtlMs / 3600000,
   });
 });
@@ -66,5 +66,5 @@ app.get("*", (req, res, next) => {
 app.listen(config.port, () => {
   console.log(`CollegeGene server on http://localhost:${config.port}`);
   console.log("Data sources: College Scorecard (live), BLS OOH (snapshot/live), verified profiles (DB).");
-  console.log("Key status:", keyStatus());
+  console.log("Key status:", keyStatus(authStatus()));
 });
