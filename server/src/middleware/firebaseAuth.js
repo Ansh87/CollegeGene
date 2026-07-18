@@ -2,7 +2,8 @@
 // the authenticated user to the request. Identity only; no Firestore, no change
 // to the app's own database model. Service-account credentials live ONLY here on
 // the server and are never sent to the client.
-import admin from "firebase-admin";
+import { initializeApp, getApps, cert } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { config } from "../config.js";
 
 let initialized = false;
@@ -41,8 +42,10 @@ function ensureInit() {
       console.error("[auth] Firebase Admin NOT initialized: no credentials found. Set FIREBASE_SERVICE_ACCOUNT_JSON.");
       return;
     }
-    if (!admin.apps.length) {
-      admin.initializeApp({ credential: admin.credential.cert(credentialObj) });
+    // firebase-admin v13+ is modular: use getApps()/initializeApp()/cert()
+    // (the old admin.apps / admin.credential.cert surface no longer exists).
+    if (getApps().length === 0) {
+      initializeApp({ credential: cert(credentialObj) });
     }
     initialized = true;
     console.log("[auth] Firebase Admin initialized OK.");
@@ -90,7 +93,7 @@ export async function requireAuth(req, res, next) {
   const idToken = match[1];
 
   try {
-    const decoded = await admin.auth().verifyIdToken(idToken);
+    const decoded = await getAuth().verifyIdToken(idToken);
     req.user = {
       uid: decoded.uid,
       email: decoded.email || null,
